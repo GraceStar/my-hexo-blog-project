@@ -1,7 +1,7 @@
 ---
 title: 聊聊JVM
 date: 2023-4-05 23:10:05
-tags: android开发
+tags: java
 ---
 
 > 引言：最近重翻了下《深入理解Java虚拟机》这本经典，本文算是读书小结吧

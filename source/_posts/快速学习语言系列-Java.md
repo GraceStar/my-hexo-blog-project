@@ -1,7 +1,7 @@
 ---
 title: 快速学习语言系列--Java
 date: 2023-1-10 23:10:54
-tags: android
+tags: java
 ---
 
 > 引言：本文帮助你快速建立对Java语言的认识和基本使用要点。
@@ -503,8 +503,60 @@ JUnit测试的使用方法：
 * 对可能发生的每种类型的异常都必须进行测试：使用assertThrows()，期待捕获到指定类型的异常
 * 条件测试是根据某些注解在运行期让JUnit自动忽略某些测试
 * 参数化测试：可以在测试代码中写死，也可以通过@CsvFileSource放到外部的CSV文件中
+## 11. 模块化
+从Java 9开始，JDK又引入了模块（Module）。模块是什么呢？用来解决什么问题呢？怎么生成模块及怎么用？我们一一展开。
+1. 模块是什么？
+   模块是一种包含依赖关系的class文件（或者二进制代码（通常是JNI扩展））的封装。它和jar包有点类似，都是一种class文件封装，但是jar包是不包含依赖关系的。
+   JDK9以后得系统库rt.jar就以身作则的拆分成了一对模块，放在$JAVA_HOME/jmods下，一堆java.xxx.jmod。每个jmod就是一个模块，里面的module-info.java里注明了模块内部的依赖关系。
+2. 模块用来解决什么问题?
+   * 从模块的定义可知，它是可以帮我们做依赖管理的；
+   * 其次，它有一个很大的好处，是可以帮助我们把jre瘦身，当我们需要发布一个自己的java程序的时候，不需要把庞大的rt.jar都下载运行。只要我们注明我们需要依赖的jre中的模块，用jlink把自己的项目也编成一个jmod。发布的时候只需要把这个jmod发给对方，对方直接运行上述命令即可，既不用下载安装JDK，也不用知道如何配置我们自己的模块，极大地方便了分发和部署。
+   * 代码访问权限控制。只有在自身代码的module-info.java中备注exports的代码，外部才可以访问到。
+   ```
+   module hello.world {
+    exports com.itranswarp.sample;
 
-## 11. 多线程
+    requires java.base;
+	requires java.xml;
+   }
+   ```
+3. 模块的用法 
+   一个jmod项目结构如图。我们需要编写module-info.java, 注明依赖的其他模块。如此就可以在代码中引用这个模块里的代码了。
+   ![](/img/17007184253904.jpg)
+    ```
+    //module-info.java
+    module hello.world {
+    	requires java.base; // 可不写，任何模块都会自动引入java.base
+    	requires java.xml;
+    }
+    
+    package com.itranswarp.sample;
+    
+    // 必须引入java.xml模块后才能使用其中的类:
+    import javax.xml.XMLConstants;
+    
+    public class Main {
+    	public static void main(String[] args) {
+    		Greeting g = new Greeting();
+    		System.out.println(g.hello(XMLConstants.XML_NS_PREFIX));
+    	}
+    }
+    ```
+    一个jmod工程写好后，剩下的就是打包编成一个可以直接发给用户的可运行jmod。
+    ```
+    //1, java编程class文件
+    javac -d bin src/module-info.java src/com/itranswarp/sample/*.java
+    //2, class文件打包成jar
+    jar --create --file hello.jar --main-class com.itranswarp.sample.Main -C bin .
+    //3, jar编成jmod
+    jmod create --class-path hello.jar hello.jmod
+    //4, 和依赖的jre一起打包，并把产物发给用户
+    jlink --module-path hello.jmod --add-modules java.base,java.xml,hello.world --output jre/
+    //5, 用户运行我们的jmod产物
+    jre/bin/java --module hello.world
+    ```
+
+## 12. 多线程
 Java语言内置了多线程支持：一个Java程序实际上是一个JVM进程，JVM进程用一个主线程来执行main()方法，在main()方法内部，我们又可以启动多个线程。此外，JVM还有负责垃圾回收的其他工作线程等。
 ### 1）线程的创建和状态
 #### 1.1）创建和状态
